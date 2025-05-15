@@ -1,17 +1,17 @@
 name: Build Windows EXE
-on: [push] 
+on: [push]
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/upload-artifact@v4
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
+      - uses: actions/checkout@v4  # Обновлено до v4
 
-      # Шаг 3: Устанавливаем зависимости
+      - name: Set up Python
+        uses: actions/setup-python@v5  # Обновлено до v5
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -22,7 +22,7 @@ jobs:
           pyinstaller --onefile --windowed --icon=app.ico main.py
 
       - name: Upload EXE
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4  # Исправлено до v4
         with:
           name: EcoProgPy-Windows
           path: dist/
