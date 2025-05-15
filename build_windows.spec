@@ -1,9 +1,12 @@
+from PyInstaller.utils.hooks import collect_dynamic_libs
+
 block_cipher = None
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=collect_dynamic_libs('PyQt5'),  # Автоматически соберет нужные DLL
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -23,11 +26,13 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='EcoProgPy',
+    name='MyApp',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,  # Сжатие EXE 
-    console=False, 
-    icon='icon/icon_wind.ico',
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
+    icon='app.ico'
 )
