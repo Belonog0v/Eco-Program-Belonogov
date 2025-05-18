@@ -13,7 +13,7 @@ class MainWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Основное окно")
+        self.setWindowTitle("Программа по расчету экономического ущерба")
         self.setGeometry(100, 100, 800, 720)
 
         self.label = QLabel("Выберите тип местности", self)
@@ -678,9 +678,6 @@ class FirstHeterogeneousWindow(QDialog):
         
         self.deflator_input = QLineEdit(self)
         self.deflator_input.setGeometry(50, 550, 300, 30)
-        
-        self.hazard_index_input = QLineEdit(self)
-        self.hazard_index_input.setGeometry(50, 600, 300, 30)
 
         # Правая колонка (подписи)
         self.name_label = QLabel("Наименование загрязняющего вещества", self)
@@ -726,10 +723,6 @@ class FirstHeterogeneousWindow(QDialog):
         self.deflator_label = QLabel("Дефлятор", self)
         self.deflator_label.setGeometry(375, 550, 400, 30)
         self.deflator_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        
-        self.hazard_index_label = QLabel("Показатель относительной опасности", self)
-        self.hazard_index_label.setGeometry(375, 600, 400, 30)
-        self.hazard_index_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
         # Кнопки
         self.save_button = QPushButton("Сохранить", self)
@@ -755,8 +748,7 @@ class FirstHeterogeneousWindow(QDialog):
             ('average_temperature', self.average_temperature_input, True),
             ('average_wind', self.average_wind_input, True),
             ('const_to_rubles', self.const_to_rubles_input, True),
-            ('deflator', self.deflator_input, True),
-            ('hazard_index', self.hazard_index_input, True)
+            ('deflator', self.deflator_input, True)
         ]
         
         data = {}
@@ -1040,7 +1032,7 @@ class ResultHeterogeneousWindow(QDialog):
         header = QWidget()
         header_layout = QHBoxLayout(header)
         
-        scale_label = QLabel("Map Scale:")
+        scale_label = QLabel("Масштаб карты:")
         self.scale_combo = QComboBox()
         self.scale_combo.addItems(["1x1 км", "5x5 км", "10x10 км"])
         self.scale_combo.currentIndexChanged.connect(self.change_scale)
@@ -1320,8 +1312,9 @@ class ResultHeterogeneousWindow(QDialog):
             return
 
         # Update coefficients from table
-        total_contribution = 0
         total_area = pi * (self.outer_radius_m**2 - self.inner_radius_m**2)
+        total_contribution = 0
+        weighted_hazard_sum = 0
         
         for row in range(self.zones_table.rowCount()):
             try:
@@ -1333,6 +1326,7 @@ class ResultHeterogeneousWindow(QDialog):
                 contribution = (zone_area / total_area) * coeff if total_area > 0 else 0
                 self.selected_zones[row]['contribution'] = contribution
                 total_contribution += contribution
+                weighted_hazard_sum += coeff * zone_area
                 
                 # Update table
                 self.zones_table.item(row, 3).setText(f"{contribution:.4f}")
@@ -1340,12 +1334,12 @@ class ResultHeterogeneousWindow(QDialog):
                 QMessageBox.warning(self, "Ошибка", f"Неверный коэффициент в строке {row+1}")
                 return
 
-        # Calculate hazard index based on zones
-        hazard_index = float(self.data['hazard_index']) * total_contribution
-        
-        # Final damage calculation
+        # Calculate average hazard coefficient based on zones (weighted by area)
+        average_hazard_coefficient = weighted_hazard_sum / total_area if total_area > 0 else 0
+
+        # Final damage calculation (using average_hazard_coefficient)
         economic_damage = (float(self.data['const_to_rubles']) * 
-                         hazard_index * 
+                         average_hazard_coefficient * 
                          self.gross_emission_mass * 
                          float(self.data['deflator']) * 
                          self.popravka_f)
@@ -1355,8 +1349,9 @@ class ResultHeterogeneousWindow(QDialog):
             f"<b>Результат:</b><br><br>"
             f"Масштаб карты: {self.current_scale}x{self.current_scale} км<br>"
             f"Всего зон: {len(self.selected_zones)}<br>"
-            f"Скорректированный индекс опасности: {hazard_index:.2f}<br><br>"
-            f"<b>Окончательный экономический ущерб: {economic_damage:,.2f} руб./усл.т</b><br><br>"
+            f"Средневзвешенный коэффициент опасности: {average_hazard_coefficient:.4f}<br>"
+            f"Суммарный вклад зон: {total_contribution:.4f}<br><br>"
+            f"<b>Экономический ущерб: {economic_damage:,.2f} руб./усл.т</b><br><br>"
         )
         
         msg = QMessageBox()
